@@ -1,4 +1,10 @@
-﻿using VRenderLib;
+﻿/*
+EXAMPLE ONE: VRENDER Hello World
+
+This is supposed to be as simple as possible, to get a gist of how VRender's API is organized.
+*/
+
+using VRenderLib;
 using VRenderLib.Interface;
 using OpenTK.Mathematics;
 using vmodel;
@@ -19,13 +25,7 @@ public class Program
         VRender.Render.OnDraw = Draw;
         VRender.Render.Run();
     }
-
-    //For very large projects, one should make a dictionary that maps from an ID to the object itself.
-    // That way, objects can be loaded in a loop and a list of entities can safely reference them.
-    // The example after the next will demonstrate how.
-    // However, for this project static references are just fine.
-
-    //one should also create a separate Game class that gets constructed in the Start method,
+    //one should create a separate Game class that gets constructed in the Start method,
     // then objects are loaded in that constructor.
     // That way, C# doesn't complain about uninitialized objects. The next example will demonstrate that.
     #nullable disable
@@ -42,6 +42,8 @@ public class Program
         // It's just a square, so it's not worth making an entire 3D model for it.
         VMesh m = new VMesh(
             new float[]{
+                // First 3 are X Y Z position, next two are X Y texture coordinates
+                // Not always the case, VRender can handle any theoretical combination of vertex attributes
                 -1, -1, 0, 0, 0,
                 -1,  1, 0, 0, 1,
                 1,  -1, 0, 1, 0,
@@ -50,18 +52,31 @@ public class Program
             new uint[]{
                 0, 1, 2,
                 1, 2, 3,
-            }, new Attributes(new EAttribute[]{EAttribute.position, EAttribute.textureCoords}),
+            },
+            //This lets the mesh know what the actual vertex attributes are. 
+            new Attributes(new EAttribute[]{EAttribute.position, EAttribute.textureCoords}),
             null
         );
-        //Normally, you want to use the async versions to theoretically speed it up.
+        //Normally, you want to use the async versions to speed it up.
         // But in this case there are only three assets to load, so don't worry.
+
+        //Load the mesh into the GPU.
         mesh = VRender.Render.LoadMesh(m);
+        //Get a shader program.
+        // Shaders can also be in GLSL code. The function used here is for basic rendering functionality.
+        // It assumes the attributes has at least a "EAttribute.position" and one or more color sources (texture, RGB or RGBA),
+        // it will throw an exception if not.
+        //If there are multiple color-proving attributes (For example both texture coords and an RGBA color),
+        // It will try to blend them in the order that they appear in the shader.
         shader = VRender.Render.GetShader(new ShaderFeatures(m.attributes, true, false));
-        var textureOrNone = VRender.Render.LoadTexture("dice.png", out var _);
-        //Normally, you want to print the errors before throwing the exception.
-        // But, this example is to demonstrate a minimal VRender project.
         //Fun fact, the dice.png file is from my first ever GMTK game jam submission.
-        if(textureOrNone is null)throw new Exception();
+        // It's not an asset of where it came from, since the entire game is drawn programatically.
+        // I just took a screenshot of the rendered result and cropped it into a png.
+        var textureOrNone = VRender.Render.LoadTexture("dice.png", out var textureException);
+        if(textureOrNone is null)
+        {
+            throw new Exception("Failed to load texture", textureException);
+        }
         texture = textureOrNone;
     }
 
